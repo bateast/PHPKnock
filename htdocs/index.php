@@ -52,6 +52,7 @@ $FWKNOP_CLI				= '/usr/bin/fwknop';
 $SERVER_PORT 			= 62201;
 $ACCESS_PORT_LIST		= 'tcp/22';
 $DESTINATION			= null;
+$CONFIGURATION			= null;
 
 // override configuration values
 include __DIR__.'/../local_config.php';
@@ -134,7 +135,7 @@ if( function_exists('pcntl_signal') ) {
  * @return	Form		Html Form
  */
 function form() {
-	global $ACCESS_PORT_LIST, $DESTINATION, $ENCRYPTION_KEY, $SERVER_PORT;
+	global $ACCESS_PORT_LIST, $DESTINATION, $CONFIGURATION, $ENCRYPTION_KEY, $SERVER_PORT;
 
 	$form	= new Form( 'knock' );
 
@@ -142,16 +143,23 @@ function form() {
 		/** @var $element FormElementDropdown */
 		$element	= $form->factory( 'Dropdown', 'destination', 'Server', $DESTINATION )
 			->setMaximumSize( 10 )
-			->setIsMultiple( true )
-			->setNotNull();
+			->setIsMultiple( true );
 	} elseif ( $DESTINATION === null ) {
 
 		/** @var $element FormElementText */
 		$element	= $form->factory( 'Text', 'destination', 'Server IP/Hostname' )
-			->setHint( 'You may enter multiple server IPs or hostnames separated by a semicolon.' )
-			->setNotNull();
+			->setHint( 'You may enter multiple server IPs or hostnames separated by a semicolon.' );
 	}
+	if( is_array($CONFIGURATION) ) {
+		/** @var $element FormElementDropdown */
+		$element	= $form->factory( 'Dropdown', 'destination', 'Server', $CONFIGURATION )
+			->setMaximumSize( 10 )
+			->setIsMultiple( false );
+	} elseif ( $CONFIGURATION === null ) {
 
+		/** @var $element FormElementText */
+		$element	= $form->factory( 'Text', 'configuration', 'Named Configuration' );
+	}
 
 	if( $SERVER_PORT === null ) {
 		/** @var $element FormElementInteger */
@@ -231,7 +239,9 @@ if( !$error && $form->element( 'doKnock' )->value() == 1 && $form->validate() ) 
 		$execute['verbose']	= '--verbose';
 	}
 
-	$execute['G']	= '-G '.escapeshellarg( escapeshellcmd( PATH_FS_PASSWORD ) );
+	if ( $encryption_key ) {
+                $execute['G']	= '-G '.escapeshellarg( escapeshellcmd( PATH_FS_PASSWORD ) );
+        }
 
 	if( $SERVER_PORT !== null ) {
 		$execute['server-port']	= '--server-port '.$SERVER_PORT;
@@ -277,6 +287,13 @@ if( !$error && $form->element( 'doKnock' )->value() == 1 && $form->validate() ) 
 		}
 	}
 
+	if( $CONFIGURATION !== null ) {
+                $conf	= $CONFIGURATION;
+	} else {
+		$value	= $form->element( 'configuration' )->dbValue();
+		$conf	= $value;
+	}
+
 	$descriptorspec = array(
 	   0 => array( "pipe", "r+" ),	// STDIN ist eine Pipe, von der das Child liest
 	   1 => array( "pipe", "w" ),	// STDOUT ist eine Pipe, in die das Child schreibt
@@ -287,10 +304,14 @@ if( !$error && $form->element( 'doKnock' )->value() == 1 && $form->validate() ) 
 		'HOME' => PATH_FS_TMP
 	);
 
+        if ( $conf ) {
+                $execute ['n']  = '-n '.escapeshellarg( escapeshellcmd( $conf ) );
+        }
+
 	foreach( $hosts as $target ) {
 		file_put_contents( PATH_FS_PASSWORD, $target.':'.$encryptionKey );
 
-		$execute['D']	= '-D '.escapeshellarg( escapeshellcmd( $target ) );
+                $execute['D']	= '-D '.escapeshellarg( escapeshellcmd( $target ) );
 
 		// execute command on CLI and check return code
 		// forward errors to stdout in order to see them in output

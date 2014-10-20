@@ -85,6 +85,20 @@ $DESTINATION = null;
 
 
 /**
+ * Define default or static configurations (see fwknoprc)
+ *
+ * If this parameter is set to null, it will allow the user to
+ * type in
+ *
+ * If set to an array like
+ * array( 'merkur' => '10.0.0.1', 'mars' => '10.0.0.2', 'venus' => '10.0.0.3' );
+ * the user will be able to select.
+ *
+ * Default: null
+ */
+$CONFIGURATION = null;
+
+/**
  * Provide a list of ports and protocols to access on a remote computer running
  * fwknopd. The format of this list is '<proto>/<port>...<proto>/<port>,
  * e.g. "tcp/22,udp/53".
